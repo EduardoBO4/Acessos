@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <title>HUB-SE | Início</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" href="../assets/logos/logoempe.png" type="image/png">
   <link rel="stylesheet" href="index.css">
   <link rel="stylesheet" href="../components/layout.css">
 </head>
@@ -23,11 +24,11 @@
       >
     </section>
 
-    <!-- Critério 2: Imagem Humberto (Fallback caso o carrossel suma / 0 notícias) -->
+    <!-- Critério 2: Imagem Humberto (fallback quando não houver notícias válidas) -->
     <div id="fallback-humberto" class="fallback-humberto" hidden aria-hidden="true">
       <img 
-        src="../assets/logos/logodeitada.png" 
-        alt="Destaque HUB-SE" 
+        src="../assets/fotos/Humberto.JPG"
+        alt="Humberto Marques"
         style="max-width: 500px; width: 90%; height: auto; border-radius: 16px; opacity: 0.85;"
       >
     </div>
@@ -57,53 +58,110 @@
     /* 3. Lifecycle e Cache */
     async function obterNoticias() {
       let salvo = null;
-      try { salvo = sessionStorage.getItem(CHAVE_CACHE); } catch (_) {}
+
+      try {
+        salvo = sessionStorage.getItem(CHAVE_CACHE);
+      } catch (_) {}
+
       if (salvo) {
         try {
           const dadosCache = JSON.parse(salvo);
-          if (Array.isArray(dadosCache)) return dadosCache;
+
+          if (Array.isArray(dadosCache)) {
+            return dadosCache;
+          }
         } catch (_) {}
-        try { sessionStorage.removeItem(CHAVE_CACHE); } catch (_) {}
+
+        try {
+          sessionStorage.removeItem(CHAVE_CACHE);
+        } catch (_) {}
       }
-      const resp = await fetch('noticias.json', { cache: 'no-cache' });
-      if (!resp.ok) throw new Error(`Status ${resp.status}`);
+
+      const resp = await fetch('noticias.json', {
+        cache: 'no-cache'
+      });
+
+      if (!resp.ok) {
+        throw new Error(`Status ${resp.status}`);
+      }
+
       const dados = await resp.json();
-      try { sessionStorage.setItem(CHAVE_CACHE, JSON.stringify(dados)); } catch (_) {}
+
+      try {
+        sessionStorage.setItem(
+          CHAVE_CACHE,
+          JSON.stringify(dados)
+        );
+      } catch (_) {}
+
       return dados;
     }
 
     /* 1. Filtro de Validade */
     function filtrarValidas(lista) {
       const agora = new Date();
+
       return (lista || [])
         .filter(n => {
-          if (!n.data_vencimento) return true;
+          if (!n.data_vencimento) {
+            return true;
+          }
 
           const dataLimite = /^\d{4}-\d{2}-\d{2}$/.test(n.data_vencimento)
             ? new Date(`${n.data_vencimento}T23:59:59`)
             : new Date(n.data_vencimento);
-          return !Number.isNaN(dataLimite.getTime()) && dataLimite >= agora;
+
+          return (
+            !Number.isNaN(dataLimite.getTime()) &&
+            dataLimite >= agora
+          );
         })
-        .sort((a, b) => new Date(b.data_lancamento || 0) - new Date(a.data_lancamento || 0));
+        .sort((a, b) => {
+          return new Date(b.data_lancamento || 0) -
+            new Date(a.data_lancamento || 0);
+        });
     }
 
     /* 1. Cálculo Dinâmico de Capacidade Visível */
     function calcularCapacidadeVisivel() {
       const estilos = getComputedStyle(secaoNoticias);
-      const padding = parseFloat(estilos.paddingLeft) + parseFloat(estilos.paddingRight);
-      const larguraDisponivel = Math.max(0, secaoNoticias.clientWidth - padding);
-      const larguraCard = parseFloat(estilos.getPropertyValue('--noticia-card-width')) || LARGURA_CARD;
-      const espaco = parseFloat(estilos.getPropertyValue('--noticia-gap')) || ESPACO;
 
-      return Math.max(1, Math.floor((larguraDisponivel + espaco) / (larguraCard + espaco)));
+      const padding =
+        parseFloat(estilos.paddingLeft) +
+        parseFloat(estilos.paddingRight);
+
+      const larguraDisponivel = Math.max(
+        0,
+        secaoNoticias.clientWidth - padding
+      );
+
+      const larguraCard =
+        parseFloat(
+          estilos.getPropertyValue('--noticia-card-width')
+        ) || LARGURA_CARD;
+
+      const espaco =
+        parseFloat(
+          estilos.getPropertyValue('--noticia-gap')
+        ) || ESPACO;
+
+      return Math.max(
+        1,
+        Math.floor(
+          (larguraDisponivel + espaco) /
+          (larguraCard + espaco)
+        )
+      );
     }
 
     function criarCard(item) {
       const a = document.createElement('a');
+
       a.href = item.link || '#';
       a.className = 'noticia-card';
 
       const img = document.createElement('img');
+
       img.src = item.imagem || '../assets/logos/logoempe.png';
       img.alt = item.titulo || 'Notícia';
       img.className = 'noticia-img';
@@ -122,56 +180,109 @@
 
       corpo.append(h3, p);
       a.append(img, corpo);
+
       return a;
     }
 
     function atualizarDistanciaCarrossel() {
-      if (!container.classList.contains('noticias-carrossel')) return;
+      if (!container.classList.contains('noticias-carrossel')) {
+        return;
+      }
 
-      const primeiroCardDuplicado = container.children[noticiasValidas.length];
-      if (!container.children.length || !primeiroCardDuplicado) return;
+      const primeiroCardDuplicado =
+        container.children[noticiasValidas.length];
+
+      if (
+        !container.children.length ||
+        !primeiroCardDuplicado
+      ) {
+        return;
+      }
 
       const primeiroCard = container.children[0];
-      const distancia = primeiroCardDuplicado.getBoundingClientRect().left - primeiroCard.getBoundingClientRect().left;
-      container.style.setProperty('--carrossel-distancia', `-${distancia}px`);
-      container.style.setProperty('--carrossel-duracao', `${Math.max(12, distancia / 55)}s`);
+
+      const distancia =
+        primeiroCardDuplicado.getBoundingClientRect().left -
+        primeiroCard.getBoundingClientRect().left;
+
+      // A animação precisa terminar exatamente no início
+      // da segunda cópia.
+      // Assim o reinício é imperceptível e nunca atravessa
+      // uma área vazia.
+      container.style.setProperty(
+        '--carrossel-distancia',
+        `-${distancia}px`
+      );
+
+      container.style.setProperty(
+        '--carrossel-duracao',
+        `${Math.max(12, distancia / 55)}s`
+      );
     }
 
     /* 1 & 2. Renderização */
     function renderizar() {
-      // 0 notícias válidas: esconde o carrossel e mostra a imagem fallback
+      // 0 notícias válidas:
+      // esconde o carrossel e mostra a imagem fallback.
       if (noticiasValidas.length === 0) {
         secaoNoticias.hidden = true;
+
         fallbackHumberto.hidden = false;
         fallbackHumberto.removeAttribute('aria-hidden');
+
         modoAtual = null;
         return;
       }
 
-      // Notícias válidas existem: esconde fallback e exibe seção
+      // Notícias válidas existem:
+      // esconde fallback e exibe seção.
       fallbackHumberto.hidden = true;
-      fallbackHumberto.setAttribute('aria-hidden', 'true');
+      fallbackHumberto.setAttribute(
+        'aria-hidden',
+        'true'
+      );
+
       secaoNoticias.hidden = false;
 
       const capacidade = calcularCapacidadeVisivel();
-      const novoModo = noticiasValidas.length > capacidade ? 'carrossel' : 'estatico';
 
-      if (novoModo === modoAtual && container.children.length > 0) {
+      const novoModo =
+        noticiasValidas.length > capacidade
+          ? 'carrossel'
+          : 'estatico';
+
+      if (
+        novoModo === modoAtual &&
+        container.children.length > 0
+      ) {
         atualizarDistanciaCarrossel();
         return;
       }
+
       modoAtual = novoModo;
 
-      // Limpa cards antigos para evitar duplicidade ao redimensionar ou voltar de página
+      // Limpa cards antigos para evitar duplicidade
+      // ao redimensionar ou voltar de página.
       container.replaceChildren();
 
       if (novoModo === 'carrossel') {
-        container.className = 'noticias-container noticias-carrossel';
-        // Duplica para rotação contínua 360° sem salto
-        [...noticiasValidas, ...noticiasValidas].forEach(n => container.appendChild(criarCard(n)));
+        container.className =
+          'noticias-container noticias-carrossel';
+
+        // Duplica para rotação contínua sem salto.
+        [
+          ...noticiasValidas,
+          ...noticiasValidas
+        ].forEach(n => {
+          container.appendChild(criarCard(n));
+        });
       } else {
-        container.className = 'noticias-container noticias-estaticas';
-        noticiasValidas.forEach(n => container.appendChild(criarCard(n)));
+        container.className =
+          'noticias-container noticias-estaticas';
+
+        noticiasValidas.forEach(n => {
+          container.appendChild(criarCard(n));
+        });
       }
 
       atualizarDistanciaCarrossel();
@@ -182,19 +293,28 @@
         const dados = await obterNoticias();
         noticiasValidas = filtrarValidas(dados);
       } catch (err) {
-        console.error('Erro ao buscar notícias:', err);
+        console.error(
+          'Erro ao buscar notícias:',
+          err
+        );
+
         noticiasValidas = [];
       }
+
       renderizar();
     }
 
-    // Mede a área que realmente contém os cards, incluindo mudanças de layout.
+    // Mede a área que realmente contém os cards,
+    // incluindo mudanças de layout.
     new ResizeObserver(() => {
-      if (noticiasValidas.length > 0) renderizar();
+      if (noticiasValidas.length > 0) {
+        renderizar();
+      }
     }).observe(secaoNoticias);
 
-    // Revalida notícias expiradas ao restaurar a página pelo BFCache.
-    window.addEventListener('pageshow', (evento) => {
+    // Revalida notícias expiradas ao restaurar
+    // a página pelo BFCache.
+    window.addEventListener('pageshow', evento => {
       if (evento.persisted) {
         modoAtual = null;
         iniciar();

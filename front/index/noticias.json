@@ -19,7 +19,7 @@
     "titulo": "Inovação no Ensino",
     "descricao": "Novos métodos de aprendizagem aplicados em Engenharia de Software.",
     "imagem": "../assets/logos/logodeitada.png",
-    "link": "../index.html",
+    "link": "index.html",
     "data_lancamento": "2026-09-22T00:00:00",
     "data_vencimento": "2026-12-31T00:00:00"
   },
@@ -43,7 +43,7 @@
     "titulo": "Vagas Abertas",
     "descricao": "Processo seletivo aberto para novos investigadores no laboratório.",
     "imagem": "../assets/logos/logoempe.png",
-    "link": "../index.html",
+    "link": "index.html",
     "data_lancamento": "2026-09-25T00:00:00",
     "data_vencimento": "2026-12-31T00:00:00"
   },
