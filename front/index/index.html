@@ -56,14 +56,19 @@
 
     /* 3. Lifecycle e Cache */
     async function obterNoticias() {
-      const salvo = sessionStorage.getItem(CHAVE_CACHE);
+      let salvo = null;
+      try { salvo = sessionStorage.getItem(CHAVE_CACHE); } catch (_) {}
       if (salvo) {
-        try { return JSON.parse(salvo); } catch (_) { sessionStorage.removeItem(CHAVE_CACHE); }
+        try {
+          const dadosCache = JSON.parse(salvo);
+          if (Array.isArray(dadosCache)) return dadosCache;
+        } catch (_) {}
+        try { sessionStorage.removeItem(CHAVE_CACHE); } catch (_) {}
       }
       const resp = await fetch('noticias.json', { cache: 'no-cache' });
       if (!resp.ok) throw new Error(`Status ${resp.status}`);
       const dados = await resp.json();
-      sessionStorage.setItem(CHAVE_CACHE, JSON.stringify(dados));
+      try { sessionStorage.setItem(CHAVE_CACHE, JSON.stringify(dados)); } catch (_) {}
       return dados;
     }
 
@@ -71,15 +76,26 @@
     function filtrarValidas(lista) {
       const agora = new Date();
       return (lista || [])
-        .filter(n => !n.data_vencimento || new Date(n.data_vencimento) >= agora)
+        .filter(n => {
+          if (!n.data_vencimento) return true;
+
+          const dataLimite = /^\d{4}-\d{2}-\d{2}$/.test(n.data_vencimento)
+            ? new Date(`${n.data_vencimento}T23:59:59`)
+            : new Date(n.data_vencimento);
+          return !Number.isNaN(dataLimite.getTime()) && dataLimite >= agora;
+        })
         .sort((a, b) => new Date(b.data_lancamento || 0) - new Date(a.data_lancamento || 0));
     }
 
     /* 1. Cálculo Dinâmico de Capacidade Visível */
     function calcularCapacidadeVisivel() {
-      const largura = secaoNoticias.clientWidth || window.innerWidth;
-      // (+ ESPACO) pois o último card não tem margem à direita
-      return Math.max(1, Math.floor((largura + ESPACO) / (LARGURA_CARD + ESPACO)));
+      const estilos = getComputedStyle(secaoNoticias);
+      const padding = parseFloat(estilos.paddingLeft) + parseFloat(estilos.paddingRight);
+      const larguraDisponivel = Math.max(0, secaoNoticias.clientWidth - padding);
+      const larguraCard = parseFloat(estilos.getPropertyValue('--noticia-card-width')) || LARGURA_CARD;
+      const espaco = parseFloat(estilos.getPropertyValue('--noticia-gap')) || ESPACO;
+
+      return Math.max(1, Math.floor((larguraDisponivel + espaco) / (larguraCard + espaco)));
     }
 
     function criarCard(item) {
@@ -109,6 +125,18 @@
       return a;
     }
 
+    function atualizarDistanciaCarrossel() {
+      if (!container.classList.contains('noticias-carrossel')) return;
+
+      const primeiroCardDuplicado = container.children[noticiasValidas.length];
+      if (!container.children.length || !primeiroCardDuplicado) return;
+
+      const primeiroCard = container.children[0];
+      const distancia = primeiroCardDuplicado.getBoundingClientRect().left - primeiroCard.getBoundingClientRect().left;
+      container.style.setProperty('--carrossel-distancia', `-${distancia}px`);
+      container.style.setProperty('--carrossel-duracao', `${Math.max(12, distancia / 55)}s`);
+    }
+
     /* 1 & 2. Renderização */
     function renderizar() {
       // 0 notícias válidas: esconde o carrossel e mostra a imagem fallback
@@ -128,7 +156,10 @@
       const capacidade = calcularCapacidadeVisivel();
       const novoModo = noticiasValidas.length > capacidade ? 'carrossel' : 'estatico';
 
-      if (novoModo === modoAtual && container.children.length > 0) return;
+      if (novoModo === modoAtual && container.children.length > 0) {
+        atualizarDistanciaCarrossel();
+        return;
+      }
       modoAtual = novoModo;
 
       // Limpa cards antigos para evitar duplicidade ao redimensionar ou voltar de página
@@ -142,6 +173,8 @@
         container.className = 'noticias-container noticias-estaticas';
         noticiasValidas.forEach(n => container.appendChild(criarCard(n)));
       }
+
+      atualizarDistanciaCarrossel();
     }
 
     async function iniciar() {
@@ -155,14 +188,16 @@
       renderizar();
     }
 
-    // Monitora redimensionamento de janela sem travar em breakpoints fixos
-    new ResizeObserver(() => renderizar()).observe(document.body);
+    // Mede a área que realmente contém os cards, incluindo mudanças de layout.
+    new ResizeObserver(() => {
+      if (noticiasValidas.length > 0) renderizar();
+    }).observe(secaoNoticias);
 
-    // Garante restauração limpa ao voltar de página (bfcache)
-    window.addEventListener('pageshow', (ev) => {
-      if (ev.persisted) {
+    // Revalida notícias expiradas ao restaurar a página pelo BFCache.
+    window.addEventListener('pageshow', (evento) => {
+      if (evento.persisted) {
         modoAtual = null;
-        renderizar();
+        iniciar();
       }
     });
 
