@@ -4,8 +4,7 @@
   box-sizing: border-box;
 }
 
-html,
-body {
+html, body {
   height: 100%;
 }
 
@@ -13,10 +12,7 @@ body {
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   background-color: #ffffff;
   color: #1c2b2d;
-  background-image: radial-gradient(
-    #bfbfbf 1px,
-    transparent 1px
-  );
+  background-image: radial-gradient(#bfbfbf 1px, transparent 1px);
   background-size: 18px 18px;
   display: flex;
   flex-direction: column;
@@ -49,7 +45,6 @@ main {
 }
 
 /* ================= FALLBACK HUMBERTO ================= */
-
 .fallback-humberto[hidden],
 .noticias-section[hidden] {
   display: none !important;
@@ -65,15 +60,11 @@ main {
 }
 
 /* ================= CARROSSEL DE NOTÍCIAS ================= */
-
 .noticias-section {
-  --noticia-card-width: 260px;
-  --noticia-gap: 25px;
-
   width: 100%;
   padding: 20px 40px;
   display: flex;
-  justify-content: center;
+  justify-content: flex-start; /* antes era center — cortava o trilho */
   align-items: center;
   overflow: hidden;
   margin-bottom: 50px;
@@ -81,28 +72,24 @@ main {
 
 .noticias-container {
   display: flex;
-  gap: var(--noticia-gap);
+  gap: 25px;
 }
 
 /* Modo Estático: Centralizado */
-
 .noticias-estaticas {
   display: flex;
   justify-content: center;
   align-items: center;
   flex-wrap: wrap;
-  width: 100%;
+  max-width: 1200px;
   margin: 0 auto;
 }
 
 /* Modo Carrossel: Rotação Contínua */
-
 .noticias-carrossel {
   display: flex;
   width: max-content;
-  animation: rolarCarrossel
-    var(--carrossel-duracao, 30s)
-    linear infinite;
+  animation: rolarCarrossel var(--duracao-carrossel, 30s) linear infinite;
   will-change: transform;
 }
 
@@ -111,7 +98,7 @@ main {
 }
 
 .noticia-card {
-  width: var(--noticia-card-width);
+  width: 260px;
   background: #f8f9fa;
   border-radius: 16px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
@@ -120,9 +107,7 @@ main {
   color: #1c2b2d;
   display: flex;
   flex-direction: column;
-  transition:
-    transform 0.25s ease,
-    box-shadow 0.25s ease;
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
   flex-shrink: 0;
 }
 
@@ -158,14 +143,8 @@ main {
   color: #555555;
 }
 
+/* Move exatamente a largura de UM conjunto de notícias */
 @keyframes rolarCarrossel {
-  0% {
-    transform: translateX(0);
-  }
-
-  100% {
-    transform: translateX(
-      var(--carrossel-distancia, -50%)
-    );
-  }
+  from { transform: translateX(0); }
+  to   { transform: translateX(calc(-1 * var(--largura-set, 0px))); }
 }
